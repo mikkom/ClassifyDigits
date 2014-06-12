@@ -57,13 +57,20 @@ let slurp_file file =
 // distance [ x1; y1; z1 ] [ x2; y2; z2 ] =
 // sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2))
 
-let distance (p1: int[]) (p2: int[]) =
+let distanceSquared (p1: int[]) (p2: int[]) =
+    let folder acc e1 e2 =
+        let diff = e1 - e2
+        acc + float (diff * diff)
+
+    Array.fold2 folder 0.0 p1 p2
+    (*
     let mutable sum = 0.0
     let len = p1.Length
     for i = 0 to len - 1 do
         let diff = p1.[i] - p2.[i]
         sum <- sum + float (diff * diff)
-    sqrt sum
+    sum
+    *)
  
  
 // 7. WRITING THE CLASSIFIER FUNCTION
@@ -78,7 +85,7 @@ let classify trainingSet (pixels: int[]) =
   //Array.map (fun x -> {Label= x.Label; Dist= (distance pixels x.Pixels )}) trainingset
   trainingSet
   |> Array.Parallel.map (fun x ->
-    x.Label, distance pixels x.Pixels)
+    x.Label, distanceSquared pixels x.Pixels)
   |> Array.minBy snd
   |> fst
  
@@ -99,10 +106,13 @@ let benchmark dataDirectory =
     Console.WriteLine("start...")
     let validationSample = slurp_file (Path.Combine (dataDirectory, "validationsample.csv"))
     let trainingSet = slurp_file (Path.Combine (dataDirectory, "trainingsample.csv"))
+    let startTime = DateTime.Now
     let num_correct =
         validationSample
         |> Array.Parallel.map (fun p -> if (classify trainingSet p.Pixels ) = p.Label then 1 else 0)
         |> Array.sum
+    let calcTime = DateTime.Now - startTime
+    printfn "Calculation took %f seconds" calcTime.TotalSeconds
     printfn "Percentage correct: %f" ((float num_correct / (float (Array.length validationSample))) * 100.0)
 
-do benchmark "/home/phil/devel/f_sharp/Dojo-Digits-Recognizer/Dojo/"
+do benchmark "../../"
